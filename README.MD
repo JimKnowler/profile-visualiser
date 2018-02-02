@@ -29,6 +29,10 @@ Visualise profile data.
 
 ``` python profiler.pyw --filename ../profile/ProfileSampleApp/profile.txt ```
 
+* Pan - move your mouse while holding down mouse button 1 or 2
+
+* Zoom - use your mouse wheel to zoom in/out
+
 ## Profile Data Format
 
 The visualiser expects profile data in a specific text format.
