@@ -33,7 +33,7 @@ class RenderContext:
 		return sample.get_start_time() > self.finish_time
 
 def render_text(cr, label, font_size, x, y, width = None):
-	""" render label using x,y as top-left co-ords """
+	# render label using x,y as top-left co-ords
 	cr.select_font_face("Arial", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
 	cr.set_font_size(font_size)
 
@@ -178,12 +178,22 @@ class ProfileRender:
 		self._width = float(width)
 		self._height = float(height)
 
+		self._validate_viewport()
+
 	def pan_by(self, dx, dy):
 		dt = self._get_dt_for_dx( dx )
+
+		if dt > 0:
+			dt = min(dt, self._start_time - self._profile_data.get_start_time())
+		else:
+			dt = max(dt, self._finish_time - self._profile_data.get_finish_time())
+
 		self._start_time -= dt
 		self._finish_time -= dt
 
 		self._offset_y += dy
+
+		self._validate_viewport()	
 
 	def scale_at(self, scale_factor, x, y):
 		x = float(x)
@@ -192,6 +202,8 @@ class ProfileRender:
 
 		self._start_time = x_time - ((x_time - self._start_time) / scale_factor)
 		self._finish_time = x_time + ((self._finish_time - x_time) / scale_factor)
+
+		self._validate_viewport()
 
 	def _get_time_at_x(self, x):
 		if x <= 0:
@@ -206,3 +218,34 @@ class ProfileRender:
 		time_per_pixel = (self._finish_time - self._start_time) / self._width
 		dt = dx * time_per_pixel
 		return dt
+	
+	def _validate_viewport(self):
+		# validate start / finish time
+		profile_start_time = self._profile_data.get_start_time()
+		profile_finish_time = self._profile_data.get_finish_time()
+
+		if self._start_time < profile_start_time:
+			self._start_time = profile_start_time
+
+		if self._finish_time > profile_finish_time:
+			self._finish_time = profile_finish_time	
+		
+		# validate offset_y		
+		profile_render_height = self._get_render_height()
+		offset_y = self._offset_y
+		bottom = self._offset_y + profile_render_height
+		if bottom < self._height:
+			offset_bottom = self._height - bottom
+			offset_y += offset_bottom
+
+		offset_y = min(0, offset_y)
+		self._offset_y = offset_y
+
+	def _get_render_height(self):
+		# get the combined height of all the render threads
+		render_height = 0
+
+		for render_thread in self._render_threads:
+			render_height += render_thread.get_height()
+		
+		return render_height
