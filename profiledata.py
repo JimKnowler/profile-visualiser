@@ -12,12 +12,14 @@ class FunctionData:
 		return self._label
 
 class SampleData:
-	def __init__(self, function, start_time):
+	def __init__(self, function, start_time, call_stack_depth):
 		self._function = function
 		self._start_time = start_time
 		self._finish_time = None
 		self._children = []
 		self._parent = None
+		self._call_stack_depth = call_stack_depth
+		self._child_call_stack_depth = 0
 
 	def get_children(self):
 		return self._children
@@ -30,6 +32,15 @@ class SampleData:
 
 	def set_parent(self, parent):
 		self._parent = parent
+		self._parent._on_child_call_stack_depth(self._call_stack_depth)
+		
+	def _on_child_call_stack_depth(self, call_stack_depth):
+		child_call_stack_depth = call_stack_depth - self._call_stack_depth
+		
+		if self._child_call_stack_depth < child_call_stack_depth:
+			self._child_call_stack_depth = child_call_stack_depth
+			if self._parent:
+				self._parent._on_child_call_stack_depth( call_stack_depth )		
 
 	def get_parent(self):
 		return self._parent
@@ -42,6 +53,12 @@ class SampleData:
 
 	def get_function(self):
 		return self._function
+	
+	def get_call_stack_depth(self):
+		return self._call_stack_depth
+	
+	def get_child_call_stack_depth(self):
+		return self._child_call_stack_depth
 
 class ThreadData:
 	def __init__(self, id, label):
@@ -74,8 +91,8 @@ class ThreadData:
 		return self._samples
 
 	def on_sample_start(self, function_id, start_time):
-		function = self._functions[function_id]
-		sample_data = SampleData(function, start_time)
+		function = self._functions[function_id]		
+		sample_data = SampleData(function, start_time, self._active_stack_depth)
 		if self._active_sample:
 			sample_data.set_parent(self._active_sample)
 			self._active_sample.get_children().append(sample_data)
@@ -83,7 +100,6 @@ class ThreadData:
 			self._samples.append(sample_data)
 
 		self._active_sample = sample_data
-
 		self._active_stack_depth += 1
 		self._max_stack_depth = max(self._max_stack_depth, self._active_stack_depth)
 

@@ -262,6 +262,52 @@ class TestProfileData:
 		assert_equals(299, thread_data_4.get_start_time())
 		assert_equals(350, thread_data_4.get_finish_time())
 		
+	def test_should_track_sample_data_call_stack_depth(self):
+		profile_data = ProfileData()
+		profile_data.on_thread(0, "my thread")
+		profile_data.on_function(0, 0, "my first function")
+
+		# sample a function call
+		profile_data.on_sample_start(0,0,5)
+		profile_data.on_sample_finish(0,0,100)
+
+		# sample a function call that calls other functions
+		profile_data.on_sample_start(0,0,200)			# depth: 0
+		profile_data.on_sample_start(0,0,300)			# depth: 1
+		profile_data.on_sample_finish(0,0,310)			
+		profile_data.on_sample_start(0,0,320)			# depth: 1
+		profile_data.on_sample_finish(0,0,330)
+		profile_data.on_sample_start(0,0,340)			# depth: 1
+		profile_data.on_sample_start(0,0,342)			# depth: 2
+		profile_data.on_sample_finish(0,0,346)
+		profile_data.on_sample_finish(0,0,350)
+		profile_data.on_sample_finish(0,0,400)
+
+		thread_data_1 = profile_data.get_thread(0)
+
+		# check the samples received for thread 0
+		samples = thread_data_1.get_samples()
+		
+		assert_equals(0, samples[0].get_call_stack_depth())
+		assert_equals(0, samples[0].get_child_call_stack_depth())
+		
+		assert_equals(0, samples[1].get_call_stack_depth())
+		assert_equals(2, samples[1].get_child_call_stack_depth())
+		
+		children = samples[1].get_children()		
+		assert_equals(1, children[0].get_call_stack_depth())
+		assert_equals(0, children[0].get_child_call_stack_depth())
+		assert_equals(1, children[1].get_call_stack_depth())
+		assert_equals(0, children[1].get_child_call_stack_depth())
+		assert_equals(1, children[2].get_call_stack_depth())
+		assert_equals(1, children[2].get_child_call_stack_depth())
+
+		children_2 = children[2].get_children()
+		assert_equals(2, children_2[0].get_call_stack_depth())
+		assert_equals(0, children_2[0].get_child_call_stack_depth())
+
+		assert_equals(3, thread_data_1.get_max_stack_depth())
+
 
 	# @todo fail to consume out of order thread
 	# @todo fail to consume function for unknown thread
