@@ -45,7 +45,7 @@ def render_text(cr, label, font_size, x, y, width = None):
 
 	(label_x, label_y, label_width, label_height, label_dx, label_dy) = cr.text_extents(label) 
 
-	if width and (label_width>width):
+	if width and (label_width > (width-LABEL_X_OFFSET)):
 		return
 
 	cr.move_to(x + LABEL_X_OFFSET,y + LABEL_OFFSET_Y + label_height)
@@ -190,6 +190,15 @@ class ProfileRender:
 				cr.restore()
 
 			offset_y += render_thread.get_height()
+
+	def render_pointer(self, cr, pointer):
+		(x,y) = pointer
+		t = self._get_time_at_x(x)
+		
+		cr.set_source_rgb(0.0, 0.0, 0.0)
+		cr.move_to(x,0)
+		cr.line_to(x, self._height)
+		cr.stroke()
 
 
 	def resize(self, width, height):

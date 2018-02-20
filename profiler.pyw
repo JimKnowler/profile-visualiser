@@ -30,6 +30,7 @@ class ProfilerWindow(gtk.DrawingArea):
 
         self._init_gtk()
 
+        self._is_mouse_over = True
         self._is_panning = False
         self._mouse_button = None
 
@@ -38,8 +39,11 @@ class ProfilerWindow(gtk.DrawingArea):
         self.connect("button_press_event", self.on_button_press_event)
         self.connect("button_release_event", self.on_button_release_event)
         self.connect("scroll-event", self.on_scroll_event)
+        self.connect("enter_notify_event", self.on_enter_notify_event)
+        self.connect("leave_notify_event", self.on_leave_notify_event)
 
         self.set_events( gtk.gdk.EXPOSURE_MASK
+                            | gtk.gdk.ENTER_NOTIFY_MASK
                             | gtk.gdk.LEAVE_NOTIFY_MASK
                             | gtk.gdk.BUTTON_PRESS_MASK
                             | gtk.gdk.BUTTON_RELEASE_MASK
@@ -65,19 +69,20 @@ class ProfilerWindow(gtk.DrawingArea):
     def on_motion_notify_event(self, widget, event):
         """ mouse is moved """
 
-        if self._is_panning:
-            x = event.x
-            y = event.y
+        x = event.x
+        y = event.y
+
+        if self._is_panning:            
             last_x, last_y = self._last_xy
 
             dx = x-last_x
-            dy = y-last_y
-
-            self._last_xy = (x,y)
+            dy = y-last_y            
 
             self._profile_render.pan_by(dx,dy)
+        
+        self._last_xy = (x,y)
 
-            self.queue_draw()
+        self.queue_draw()
 
     def on_button_press_event(self, widget, event):
         """ mouse button is pressed """
@@ -110,6 +115,12 @@ class ProfilerWindow(gtk.DrawingArea):
             self._profile_render.scale_at( SCALE_FACTOR, x, y )
 
         self.queue_draw()
+    
+    def on_enter_notify_event(self, widget, event):
+        self._is_mouse_over = True
+
+    def on_leave_notify_event(self, widget, event):
+        self._is_mouse_over = False
 
     # Handle the expose-event by drawing
     def do_expose_event(self, event):
@@ -123,6 +134,9 @@ class ProfilerWindow(gtk.DrawingArea):
         cr.clip()
 
         self._profile_render.render(cr)
+
+        if self._is_mouse_over:
+            self._profile_render.render_pointer(cr, self._last_xy)
 
     # Handle the configure-event by resizing
     def do_configure_event(self, event):
