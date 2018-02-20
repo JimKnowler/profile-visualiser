@@ -16,6 +16,7 @@ class SampleData:
 		self._function = function
 		self._start_time = start_time
 		self._finish_time = None
+		self._duration = 0
 		self._children = []
 		self._parent = None
 		self._call_stack_depth = call_stack_depth
@@ -29,6 +30,7 @@ class SampleData:
 
 	def set_finish_time(self, finish_time):
 		self._finish_time = finish_time
+		self._duration = self._finish_time - self._start_time
 
 	def set_parent(self, parent):
 		self._parent = parent
@@ -50,6 +52,9 @@ class SampleData:
 
 	def get_finish_time(self):
 		return self._finish_time
+	
+	def get_duration(self):
+		return self._duration
 
 	def get_function(self):
 		return self._function

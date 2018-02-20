@@ -2,12 +2,18 @@ import cairo
 import colorsys
 
 TITLE_HEIGHT = 35
-ROW_HEIGHT = 30
+ROW_HEIGHT = 40
 COLOUR_BLACK = (0.1,0.1,0.1)
 COLOUR_SAMPLE = (0.7, 0.7, 0.9)
 
 LABEL_X_OFFSET = 4
-LABEL_offset_y = 4
+LABEL_OFFSET_Y = 4
+
+TEXT_SIZE_LABEL = 13
+TEXT_SIZE_TITLE = 17
+TEXT_SIZE_DURATION = 10
+
+TEXT_LABEL_DURATION_OFFSET_Y = 20
 
 class RenderContext:
 	def __init__(self, cr, width, height, start_time, finish_time):
@@ -42,8 +48,8 @@ def render_text(cr, label, font_size, x, y, width = None):
 	if width and (label_width>width):
 		return
 
-	cr.move_to(x + LABEL_X_OFFSET,y + LABEL_offset_y + label_height)
-	cr.show_text(label) 
+	cr.move_to(x + LABEL_X_OFFSET,y + LABEL_OFFSET_Y + label_height)
+	cr.show_text(label)
 
 def render_sample(render_context, sample, y):
 	if not render_context.is_sample_visible(sample):
@@ -83,7 +89,12 @@ def render_sample(render_context, sample, y):
 		if width > 10:
 			# function name
 			label = sample.get_function().get_label()
-			render_text(cr, label, 13, start_x, y, width)
+			render_text(cr, label, TEXT_SIZE_LABEL, start_x, y, width)
+
+			duration = sample.get_duration()
+			
+			duration_label = '%.3fms' % ( sample.get_duration() / 1000.0 )
+			render_text(cr, duration_label, TEXT_SIZE_DURATION, start_x, y + TEXT_LABEL_DURATION_OFFSET_Y, width)
 
 		# recursive calls
 		children = sample.get_children()
@@ -112,7 +123,7 @@ class ProfileRenderThread:
 		# render title
 		title = self._thread_data.get_label()
 		cr.set_source_rgb(*COLOUR_BLACK)
-		render_text(cr, title, 17, 0, 0)
+		render_text(cr, title, TEXT_SIZE_TITLE, 0, 0)
 
 		# render samples
 		render_context.sample_colour = self._colour
