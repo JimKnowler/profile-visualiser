@@ -62,12 +62,19 @@ def render_sample(render_context, sample, y):
 	# make sure we always render at least something for a sample
 	width = max(width,0.5)
 
-	# filled rectangle
-	cr.set_source_rgb(*render_context.sample_colour)
-	cr.rectangle(start_x,y, width, ROW_HEIGHT)
-	cr.fill()
+	if width < 4:
+		# filled rectangle for this sample + all its' children
+		call_stack_depth = sample.get_child_call_stack_depth() + 1
+		
+		cr.set_source_rgb(*render_context.sample_colour)
+		cr.rectangle(start_x,y, width, ROW_HEIGHT * call_stack_depth)
+		cr.fill()
+	else:
+		# filled rectangle
+		cr.set_source_rgb(*render_context.sample_colour)
+		cr.rectangle(start_x,y, width, ROW_HEIGHT)
+		cr.fill()
 
-	if width > 3:
 		# black outline
 		cr.set_source_rgb(*COLOUR_BLACK)
 		cr.rectangle(start_x,y, width, ROW_HEIGHT)
@@ -78,11 +85,11 @@ def render_sample(render_context, sample, y):
 			label = sample.get_function().get_label()
 			render_text(cr, label, 13, start_x, y, width)
 
-	# recursive calls
-	children = sample.get_children()
-	for child in children:
-		if not render_sample( render_context, child, y+ROW_HEIGHT):
-			return False
+		# recursive calls
+		children = sample.get_children()
+		for child in children:
+			if not render_sample( render_context, child, y+ROW_HEIGHT):
+				return False
 
 	return True
 
