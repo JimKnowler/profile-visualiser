@@ -65,17 +65,41 @@ class SampleData:
 	def get_child_call_stack_depth(self):
 		return self._child_call_stack_depth
 
+class EventData:
+	def __init__(self, id, label):
+		self._id = id
+		self._label = label
+
+	def get_id(self):
+		return self._id
+
+	def get_label(self):
+		return self._label
+
+class EventSampleData:
+	def __init__(self, event, time):
+		self._event = event
+		self._time = time
+
+	def get_event(self):
+		return self._event
+
+	def get_time(self):
+		return self._time
+
 class ThreadData:
 	def __init__(self, id, label):
 		self._id = id
 		self._label = label
 		self._functions = []
-		self._samples = []
+		self._samples = []		
 		self._active_sample = None
 		self._active_stack_depth = 0
 		self._max_stack_depth = 0
 		self._start_time = None
 		self._finish_time = None
+		self._events = []
+		self._event_samples = []
 
 	def get_id(self):
 		return self._id
@@ -136,12 +160,32 @@ class ThreadData:
 		num_functions = len(self._functions)
 		self._functions.extend(other._functions)
 		self._samples.extend(other._samples)
-
+	
 	def debug_tty(self):
 		print "Thread:", self._label
 		print " Max Stack Depth:", self._max_stack_depth
 		print " Start Time:", self._start_time
 		print " Finish Time:", self._finish_time
+	
+	def add_event(self, event_data):
+		self._events.append(event_data)
+	
+	def get_num_events(self):
+		return len(self._events)
+	
+	def get_event(self, index):
+		return self._events[index]
+	
+	def on_event_emit(self, event_id, time):
+		event = self._events[event_id]
+		event_sample_data = EventSampleData(event, time)
+		self._event_samples.append(event_sample_data)
+
+	def get_num_event_samples(self):
+		return len(self._event_samples)
+	
+	def get_event_sample(self, index):
+		return self._event_samples[index]
 
 class ProfileData:
 	def __init__(self):
@@ -168,12 +212,18 @@ class ProfileData:
 
 		if (self._start_time==None):
 			self._start_time = start_time
-		#	self._finish_time = finish_time
 
 	def on_sample_finish(self, thread_id, function_id, finish_time):
 		self._threads[thread_id].on_sample_finish(function_id, finish_time)
 
 		self._finish_time = finish_time
+	
+	def on_event(self, thread_id, event_id, event_label):
+		event_data = EventData(event_id, event_label)
+		self._threads[thread_id].add_event( event_data )
+
+	def on_event_emit(self, thread_id, event_id, time):
+		self._threads[thread_id].on_event_emit(event_id, time)
 
 	def get_start_time(self):
 		return self._start_time

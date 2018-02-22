@@ -308,6 +308,75 @@ class TestProfileData:
 
 		assert_equals(3, thread_data_1.get_max_stack_depth())
 
+	def test_should_register_event(self):
+		profile_data = ProfileData()
+		profile_data.on_thread(0, "my thread")
+		profile_data.on_event(0, 0, "my first event")
+
+		thread = profile_data.get_thread(0)
+		assert_equals(1, thread.get_num_events())
+		event_data = thread.get_event(0)
+		assert_equals("my first event", event_data.get_label())
+		assert_equals(0, event_data.get_id())
+
+	def test_should_register_events_on_multiple_threads(self):
+		profile_data = ProfileData()
+		profile_data.on_thread(0, "my thread")
+		profile_data.on_thread(1, "my 2nd thread")
+		profile_data.on_thread(2, "my 3rd thread")
+		profile_data.on_event(0, 0, "my event 1")
+		profile_data.on_event(1, 0, "my event 2")
+		profile_data.on_event(2, 0, "my event 3")
+		profile_data.on_event(2, 1, "my event 4")
+		profile_data.on_event(1, 1, "my event 5")
+		profile_data.on_event(2, 2, "my event 6")
+
+		thread_0 = profile_data.get_thread(0)
+		assert_equals(1, thread_0.get_num_events())
+		assert_equals(0, thread_0.get_num_event_samples())
+		
+		thread_1 = profile_data.get_thread(1)
+		assert_equals(2, thread_1.get_num_events())
+		assert_equals(0, thread_1.get_num_event_samples())
+
+		thread_2 = profile_data.get_thread(2)
+		assert_equals(3, thread_2.get_num_events())
+		assert_equals(0, thread_2.get_num_event_samples())
+	
+	def test_should_register_and_emit_event(self):
+		profile_data = ProfileData()
+		profile_data.on_thread(0, "my thread")
+		profile_data.on_event(0, 0, "my first event")
+		profile_data.on_event_emit(0, 0, 1234)
+		
+		thread = profile_data.get_thread(0)
+		assert_equals(1, thread.get_num_events())
+		assert_equals(1, thread.get_num_event_samples())
+
+		event_sample_data = thread.get_event_sample(0)
+		assert_equals(1234, event_sample_data.get_time())
+
+	def test_should_register_and_emit_events_on_multiple_threads(self):
+		profile_data = ProfileData()
+		profile_data.on_thread(0, "my thread")
+		profile_data.on_thread(1, "my 2nd thread")
+		profile_data.on_thread(2, "my 3rd thread")
+		profile_data.on_event(0, 0, "my event 1")
+		profile_data.on_event(1, 0, "my event 2")
+		profile_data.on_event(2, 0, "my event 3")		
+		profile_data.on_event_emit(0,0,1)
+		profile_data.on_event_emit(1,0,2)
+		profile_data.on_event_emit(2,0,3)
+		profile_data.on_event_emit(1,0,4)
+		profile_data.on_event_emit(0,0,5)
+		profile_data.on_event_emit(1,0,6)
+
+		thread_0 = profile_data.get_thread(0)
+		thread_1 = profile_data.get_thread(1)
+		thread_2 = profile_data.get_thread(2)
+		assert_equals(2, thread_0.get_num_event_samples())
+		assert_equals(3, thread_1.get_num_event_samples())
+		assert_equals(1, thread_2.get_num_event_samples())
 
 	# @todo fail to consume out of order thread
 	# @todo fail to consume function for unknown thread
