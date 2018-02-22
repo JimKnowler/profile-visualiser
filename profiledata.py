@@ -186,6 +186,9 @@ class ThreadData:
 	
 	def get_event_sample(self, index):
 		return self._event_samples[index]
+	
+	def get_event_samples(self):
+		return self._event_samples
 
 class ProfileData:
 	def __init__(self):

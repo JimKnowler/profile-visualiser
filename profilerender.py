@@ -37,6 +37,14 @@ class RenderContext:
 
 	def is_sample_off_right_of_screen(self, sample):
 		return sample.get_start_time() > self.finish_time
+	
+	def is_event_visible(self, event_sample):
+		time = event_sample.get_time()
+		return (time > self.start_time) and (time < self.finish_time)
+	
+	def is_event_off_right_of_screen(self, event_sample):
+		time = event_sample.get_time()
+		return (time > self.finish_time)
 
 def render_text(cr, label, font_size, x, y, width = None):
 	# render label using x,y as top-left co-ords
@@ -104,6 +112,20 @@ def render_sample(render_context, sample, y):
 
 	return True
 
+def render_event(render_context, event_sample, y, height):
+	if not render_context.is_event_visible(event_sample):
+		return not render_context.is_event_off_right_of_screen(event_sample)
+	
+	cr = render_context.cr
+
+	time = event_sample.get_time()
+	x = render_context.get_x_for_time(time)
+	
+	cr.set_source_rgb(*COLOUR_BLACK)
+	cr.move_to(x,y)
+	cr.line_to(x,y+height)
+	cr.stroke()
+
 class ProfileRenderThread:
 
 	def __init__(self, thread_data, colour, background_colour):
@@ -132,7 +154,13 @@ class ProfileRenderThread:
 		for sample in samples:
 			if not render_sample(render_context, sample, TITLE_HEIGHT):
 				break
-			
+		
+		# render events
+		event_samples = self._thread_data.get_event_samples()
+		event_height = self.get_height()
+		for event_sample in event_samples:
+			if not render_event(render_context, event_sample, 0, event_height):
+				break			
 
 	def get_height(self):
 		""" return the height of this thread on screen, in pixels """
