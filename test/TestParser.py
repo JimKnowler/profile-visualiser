@@ -94,3 +94,39 @@ class TestParser(PyMockTestCase):
 		parser.parse("# another comment with spaces")
 
 		self.verify()
+	
+	def test_should_parse_event_msg(self):
+		mock_consumer = self.mock()
+		parser = ProfileParser(mock_consumer)
+
+		self.expectAndReturn(mock_consumer.on_event(113, 223, "My event name"), None)
+		self.replay()
+		parser.parse("V 113 223 My event name")
+		self.verify()
+
+	def test_should_parse_event_msg_2(self):
+		mock_consumer = self.mock()
+		parser = ProfileParser(mock_consumer)
+
+		self.expectAndReturn(mock_consumer.on_event(43, 44, "Another event"), None)
+		self.replay()
+		parser.parse("V 43 44 Another event")
+		self.verify()
+	
+	def test_should_parse_emit_event_msg(self):
+		mock_consumer = self.mock()
+		parser = ProfileParser(mock_consumer)
+
+		self.expectAndReturn(mock_consumer.on_event_emit(0, 113, 333), None)
+		self.replay()
+		parser.parse("Y 0 113 333")
+		self.verify()
+
+	def test_should_parse_emit_event_msg_2(self):
+		mock_consumer = self.mock()
+		parser = ProfileParser(mock_consumer)
+
+		self.expectAndReturn(mock_consumer.on_event_emit(2, 1, 444), None)
+		self.replay()
+		parser.parse("Y 2 1 444")
+		self.verify()

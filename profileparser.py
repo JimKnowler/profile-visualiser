@@ -54,3 +54,19 @@ class ProfileParser:
 			time = int(split_line[3])
 
 			self._consumer.on_sample_finish(thread_id, function_id, time)
+		elif line_type == 'V':
+			split_line = line.split(' ',3)
+
+			thread_id = int(split_line[1])
+			event_id = int(split_line[2])
+			event_label = split_line[3]
+
+			self._consumer.on_event(thread_id, event_id, event_label)
+		elif line_type == 'Y':
+			split_line = line.split(' ',3)
+			
+			thread_id = int(split_line[1])
+			event_id = int(split_line[2])
+			time = int(split_line[3])
+
+			self._consumer.on_event_emit(thread_id, event_id, time)
