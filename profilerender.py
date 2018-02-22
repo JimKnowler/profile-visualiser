@@ -1,10 +1,11 @@
 import cairo
 import colorsys
 
-TITLE_HEIGHT = 35
-ROW_HEIGHT = 40
+TITLE_HEIGHT = 25
+EVENT_LABEL_HEIGHT = 20
+SAMPLE_HEIGHT = 40
 COLOUR_BLACK = (0.1,0.1,0.1)
-COLOUR_SAMPLE = (0.7, 0.7, 0.9)
+COLOUR_WHITE = (1,1,1)
 
 LABEL_X_OFFSET = 4
 LABEL_OFFSET_Y = 4
@@ -14,6 +15,10 @@ TEXT_SIZE_TITLE = 17
 TEXT_SIZE_DURATION = 10
 
 TEXT_LABEL_DURATION_OFFSET_Y = 20
+
+TEXT_SIZE_EVENT_LABEL = 10
+EVENT_LABEL_OFFSET_X = 1
+EVENT_LABEL_OFFSET_Y = 1
 
 class RenderContext:
 	def __init__(self, cr, width, height, start_time, finish_time):
@@ -59,6 +64,8 @@ def render_text(cr, label, font_size, x, y, width = None):
 	cr.move_to(x + LABEL_X_OFFSET,y + LABEL_OFFSET_Y + label_height)
 	cr.show_text(label)
 
+	return (label_width, label_height)
+
 def render_sample(render_context, sample, y):
 	if not render_context.is_sample_visible(sample):
 		return not render_context.is_sample_off_right_of_screen(sample)
@@ -81,17 +88,17 @@ def render_sample(render_context, sample, y):
 		call_stack_depth = sample.get_child_call_stack_depth() + 1
 		
 		cr.set_source_rgb(*render_context.sample_colour)
-		cr.rectangle(start_x,y, width, ROW_HEIGHT * call_stack_depth)
+		cr.rectangle(start_x,y, width, SAMPLE_HEIGHT * call_stack_depth)
 		cr.fill()
 	else:
 		# filled rectangle
 		cr.set_source_rgb(*render_context.sample_colour)
-		cr.rectangle(start_x,y, width, ROW_HEIGHT)
+		cr.rectangle(start_x,y, width, SAMPLE_HEIGHT)
 		cr.fill()
 
 		# black outline
 		cr.set_source_rgb(*COLOUR_BLACK)
-		cr.rectangle(start_x,y, width, ROW_HEIGHT)
+		cr.rectangle(start_x,y, width, SAMPLE_HEIGHT)
 		cr.stroke()
 
 		if width > 10:
@@ -107,7 +114,7 @@ def render_sample(render_context, sample, y):
 		# recursive calls
 		children = sample.get_children()
 		for child in children:
-			if not render_sample( render_context, child, y+ROW_HEIGHT):
+			if not render_sample( render_context, child, y+SAMPLE_HEIGHT):
 				return False
 
 	return True
@@ -121,9 +128,24 @@ def render_event(render_context, event_sample, y, height):
 	time = event_sample.get_time()
 	x = render_context.get_x_for_time(time)
 	
+	cr.set_source_rgb(*COLOUR_WHITE)
+	cr.move_to(x,y)
+	cr.line_to(x,y+height)
+	cr.set_line_width(3)
+	cr.stroke()
+
 	cr.set_source_rgb(*COLOUR_BLACK)
 	cr.move_to(x,y)
 	cr.line_to(x,y+height)
+	cr.set_line_width(2)
+	cr.stroke()
+
+	event = event_sample.get_event()
+	label = event.get_label()
+	(label_width, label_height) = render_text(cr, label, TEXT_SIZE_EVENT_LABEL, x + EVENT_LABEL_OFFSET_X, y + EVENT_LABEL_OFFSET_Y)
+
+	cr.move_to(x,y)
+	cr.line_to(x + EVENT_LABEL_OFFSET_X + label_width, y)
 	cr.stroke()
 
 class ProfileRenderThread:
@@ -132,7 +154,7 @@ class ProfileRenderThread:
 		self._thread_data = thread_data
 		self._colour = colour
 		self._background_colour = background_colour
-		self._height = TITLE_HEIGHT + (self._thread_data.get_max_stack_depth() * ROW_HEIGHT)
+		self._height = TITLE_HEIGHT + EVENT_LABEL_HEIGHT + (self._thread_data.get_max_stack_depth() * SAMPLE_HEIGHT)
 
 	def render(self, render_context):
 		cr = render_context.cr
@@ -152,14 +174,14 @@ class ProfileRenderThread:
 		
 		samples = self._thread_data.get_samples()
 		for sample in samples:
-			if not render_sample(render_context, sample, TITLE_HEIGHT):
+			if not render_sample(render_context, sample, TITLE_HEIGHT + EVENT_LABEL_HEIGHT):
 				break
 		
 		# render events
 		event_samples = self._thread_data.get_event_samples()
 		event_height = self.get_height()
 		for event_sample in event_samples:
-			if not render_event(render_context, event_sample, 0, event_height):
+			if not render_event(render_context, event_sample, TITLE_HEIGHT, event_height):
 				break			
 
 	def get_height(self):
