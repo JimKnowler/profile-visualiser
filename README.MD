@@ -115,3 +115,28 @@ The 'Start Sample' and 'End Sample' log entries are used to log times at which f
 
 * 'Function ID' corresponds to the Function ID of a Function registered with ( **F** )
 
+### V = Event
+
+``` V 3 4 Frame Start ```
+
+``` V <Thread ID> <Event ID> <Event Label>\n ```
+
+Register an event for a thread, that can then be emitted multiple times.
+
+* 'Thread ID' corresponds to the Thread ID of a Thread registered with ( **T** ) 
+
+* 'Event ID' should be unique for each event within each thread
+  * i.e. Each Thread can allocate Event IDs independently
+
+* 'Event Label' is parsed as all remaining characters until the newline, so it can include spaces
+
+### Y = Emit Event
+
+``` Y 3 4 566344 ```
+
+``` Y <Thread ID> <Event ID> <Clock Time in Microseconds>\n ```
+
+* 'Thread ID' corresponds to the Thread ID of a Thread registered with ( **T** ) 
+
+* 'Event ID' corresponds to the Event ID of a Event registered with ( **V** )
+
