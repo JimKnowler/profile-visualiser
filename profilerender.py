@@ -20,6 +20,8 @@ TEXT_SIZE_EVENT_LABEL = 10
 EVENT_LABEL_OFFSET_X = 1
 EVENT_LABEL_OFFSET_Y = 1
 
+COUNTER_ROW_HEIGHT = 100
+
 class RenderContext:
 	def __init__(self, cr, width, height, start_time, finish_time):
 		self.cr = cr
@@ -148,6 +150,77 @@ def render_event(render_context, event_sample, y, height):
 	cr.line_to(x + EVENT_LABEL_OFFSET_X + label_width, y)
 	cr.stroke()
 
+class ProfileRenderCounter:
+
+	def __init__(self, counter_data, colour, background_colour):
+		self._counter_data = counter_data
+		self._colour = colour
+		self._background_colour = background_colour
+		self._height = TITLE_HEIGHT + COUNTER_ROW_HEIGHT
+			
+	def render(self, render_context):
+		cr = render_context.cr
+		counter_data = self._counter_data
+
+		# render background colour
+		cr.set_source_rgb(*self._background_colour)
+		cr.rectangle(0, 0, render_context.width, self._height)
+		cr.fill()
+
+		# render title
+		title = "Counter: " + counter_data.get_label()
+		cr.set_source_rgb(*COLOUR_BLACK)
+		render_text(cr, title, TEXT_SIZE_TITLE, 0, 0)
+
+		# render values		
+		samples = counter_data.get_samples()		
+		if len(samples) > 0:		
+			cr.set_source_rgb(*self._colour)
+
+			max_value = counter_data.get_max_value()
+			min_value = counter_data.get_min_value()
+			y_scale = float(COUNTER_ROW_HEIGHT) / (max_value-min_value)
+			min_value_height = -min_value * y_scale
+
+			cr.translate(0, TITLE_HEIGHT)
+			
+			def render_sample(cr, last_x, x, value):
+				value_height = float(value) * y_scale
+				if value >= 0:
+					cr.rectangle(last_x, COUNTER_ROW_HEIGHT - min_value_height - value_height, 1+x-last_x, value_height)
+				else:
+					value_height = -value_height
+					cr.rectangle(last_x, COUNTER_ROW_HEIGHT - min_value_height, 1+x-last_x, value_height)
+				cr.fill()				
+
+			last_sample = samples[0]
+
+			for sample in samples:
+				last_x = render_context.get_x_for_time(last_sample.get_time())
+				x = render_context.get_x_for_time(sample.get_time())
+				value = last_sample.get_value()
+
+				render_sample(cr, last_x, x, value)				
+
+				last_sample = sample
+
+			end_x = render_context.get_x_for_time(render_context.finish_time)
+
+			# render the last sample
+			last_x = render_context.get_x_for_time(last_sample.get_time())
+			value = last_sample.get_value()
+			render_sample(cr, last_x, end_x, value)
+			
+			# render the x-axis
+			line_y = COUNTER_ROW_HEIGHT - min_value_height
+			cr.set_line_width(1)
+			cr.move_to(0, line_y)
+			cr.line_to(end_x, line_y)
+			cr.stroke()
+	
+	def get_height(self):
+		return self._height
+
 class ProfileRenderThread:
 
 	def __init__(self, thread_data, colour, background_colour):
@@ -165,7 +238,7 @@ class ProfileRenderThread:
 		cr.fill()
 
 		# render title
-		title = self._thread_data.get_label()
+		title = "Thread: " + self._thread_data.get_label()
 		cr.set_source_rgb(*COLOUR_BLACK)
 		render_text(cr, title, TEXT_SIZE_TITLE, 0, 0)
 
@@ -195,26 +268,40 @@ class ProfileRender:
 		self._width = 0.0
 		self._height = 0.0
 		self._profile_data = profile_data
-		
+		self._render_counters = []
+		self._render_threads = []		
 		self._offset_y = 0
+		
+		num_counters = profile_data.get_num_counters()
+		num_threads = profile_data.get_num_threads()
+		num_rows = num_counters + num_threads
 
-		self._render_threads = []
+		row_index_mutable = [0]
+		
+		def get_row_colours():
+			row_index = row_index_mutable[0]
+			background_colour =  (1.0,1.0,1.0) if (row_index % 2) else (243.0/255.0,245.0/255.0,220.0/255.0)
+			colour = colorsys.hls_to_rgb(float(row_index+1) / float(num_rows), 0.5, 0.5)
+			row_index_mutable[0] += 1
+			return (background_colour, colour)
+		
+		for i in range(num_counters):
+			counter_data = profile_data.get_counter(i)
+			(background_colour, colour) = get_row_colours()			
+			render_counter = ProfileRenderCounter(counter_data, colour, background_colour)
+			self._render_counters.append( render_counter )
+		 				
+		for i in range(num_threads):
+			thread_data = profile_data.get_thread(i)
+			(background_colour, colour) = get_row_colours()			
+			render_thread = ProfileRenderThread(thread_data, colour, background_colour)
+			self._render_threads.append( render_thread )
 
- 		# time at left edge of the window
+		# time at left edge of the window
 		self._start_time = profile_data.get_start_time()
 
 		# time at right edge of the window
 		self._finish_time = profile_data.get_finish_time()
-
-		num_threads = profile_data.get_num_threads()
-
-		for i in range(num_threads):
-			thread_data = profile_data.get_thread(i)
-			background_colour =  (1.0,1.0,1.0) if (i%2) else (243.0/255.0,245.0/255.0,220.0/255.0)
-			colour = colorsys.hls_to_rgb(float(i+1) / float(num_threads), 0.5, 0.5)
-			render_thread = ProfileRenderThread(thread_data, colour, background_colour)
-			self._render_threads.append( render_thread )
-
 
 	def render(self, cr):
 
@@ -227,6 +314,18 @@ class ProfileRender:
 		offset_x = 0
 
 		render_context = RenderContext( cr, self._width, self._height, self._start_time, self._finish_time)
+
+		for render_counter in self._render_counters:
+			if offset_y > self._height:
+				break
+			
+			if (offset_y + render_counter.get_height()) > 0:
+				cr.save()
+				cr.translate(offset_x,offset_y)
+				render_counter.render(render_context)
+				cr.restore()
+
+			offset_y += render_counter.get_height()
 
 		for render_thread in self._render_threads:
 
@@ -319,10 +418,13 @@ class ProfileRender:
 		self._offset_y = offset_y
 
 	def _get_render_height(self):
-		# get the combined height of all the render threads
+		# get the combined height of all the render counters & threads
 		render_height = 0
 
+		for render_counter in self._render_counters:
+			render_height += render_counter.get_height()
+
 		for render_thread in self._render_threads:
-			render_height += render_thread.get_height()
+			render_height += render_thread.get_height()	
 		
 		return render_height

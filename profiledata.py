@@ -206,6 +206,9 @@ class CounterData:
 		self._id = id
 		self._label = label
 		self._samples = []
+
+		self._max_value = 0
+		self._min_value = 0
 	
 	def get_id(self):
 		return self._id
@@ -218,6 +221,16 @@ class CounterData:
 	
 	def add_sample(self, sample):
 		self._samples.append(sample)
+		
+		value = sample.get_value()
+		self._max_value = max(self._max_value, value)
+		self._min_value = min(self._min_value, value)
+
+	def get_max_value(self):
+		return self._max_value
+
+	def get_min_value(self):
+		return self._min_value
 
 class ProfileData:
 	def __init__(self):
