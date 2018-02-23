@@ -33,6 +33,7 @@ class ProfilerWindow(gtk.DrawingArea):
         self._is_mouse_over = True
         self._is_panning = False
         self._mouse_button = None
+        self._last_xy = None
 
     def _init_gtk(self):
         self.connect("motion_notify_event", self.on_motion_notify_event)
@@ -118,6 +119,9 @@ class ProfilerWindow(gtk.DrawingArea):
     
     def on_enter_notify_event(self, widget, event):
         self._is_mouse_over = True
+        x = event.x
+        y = event.y
+        self._last_xy = (x,y)
 
     def on_leave_notify_event(self, widget, event):
         self._is_mouse_over = False
