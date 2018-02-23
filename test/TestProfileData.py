@@ -378,6 +378,81 @@ class TestProfileData:
 		assert_equals(3, thread_1.get_num_event_samples())
 		assert_equals(1, thread_2.get_num_event_samples())
 
+	def test_should_report_num_counters(self):
+		profile_data = ProfileData()
+		assert_equals(0, profile_data.get_num_counters())
+
+	def test_should_register_counter(self):
+		profile_data = ProfileData()
+		profile_data.on_counter(0, "my counter")
+		assert_equals(1, profile_data.get_num_counters())
+
+		counter_0 = profile_data.get_counter(0)
+		assert_equals(0, counter_0.get_id())
+		assert_equals("my counter", counter_0.get_label())
+	
+	def test_should_register_counter_and_handle_values(self):
+		profile_data = ProfileData()
+		profile_data.on_counter(0, "my counter")
+
+		profile_data.on_counter_value(0, 1, 3)
+		profile_data.on_counter_value(0, 200, 2)
+		profile_data.on_counter_value(0, 3000, 1)
+
+		counter_0 = profile_data.get_counter(0)
+		samples = counter_0.get_samples()
+		assert_equals(3, len(samples))
+
+		assert_equals(1, samples[0].get_time())
+		assert_equals(3, samples[0].get_value())
+
+		assert_equals(200, samples[1].get_time())
+		assert_equals(2, samples[1].get_value())
+
+		assert_equals(3000, samples[2].get_time())
+		assert_equals(1, samples[2].get_value())
+	
+	def test_should_register_multiple_counters(self):
+		profile_data = ProfileData()
+		profile_data.on_counter(0, "my counter")
+		profile_data.on_counter(1, "my counter 2")
+		assert_equals(2, profile_data.get_num_counters())
+				
+		counter_0 = profile_data.get_counter(0)
+		assert_equals(0, counter_0.get_id())
+		assert_equals("my counter", counter_0.get_label())
+
+		counter_1 = profile_data.get_counter(1)
+		assert_equals(1, counter_1.get_id())
+		assert_equals("my counter 2", counter_1.get_label())
+
+	def test_should_register_multiple_counters_and_handle_values(self):
+		profile_data = ProfileData()
+		profile_data.on_counter(0, "my counter")
+		profile_data.on_counter(1, "my counter 2")
+		assert_equals(2, profile_data.get_num_counters())
+
+		profile_data.on_counter_value(0, 1, 3)
+		profile_data.on_counter_value(1, 200, 2)
+		profile_data.on_counter_value(0, 3000, 1)
+
+		counter_0 = profile_data.get_counter(0)
+		samples_0 = counter_0.get_samples()
+		assert_equals(2, len(samples_0))
+
+		assert_equals(1, samples_0[0].get_time())
+		assert_equals(3, samples_0[0].get_value())
+
+		assert_equals(3000, samples_0[1].get_time())
+		assert_equals(1, samples_0[1].get_value())
+
+		counter_1 = profile_data.get_counter(1)
+		samples_1 = counter_1.get_samples()
+		assert_equals(1, len(samples_1))		
+
+		assert_equals(200, samples_1[0].get_time())
+		assert_equals(2, samples_1[0].get_value())
+
 	# @todo fail to consume out of order thread
 	# @todo fail to consume function for unknown thread
 	# @todo fail to consume out of order function for thread

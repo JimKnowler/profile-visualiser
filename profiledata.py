@@ -190,9 +190,39 @@ class ThreadData:
 	def get_event_samples(self):
 		return self._event_samples
 
+class CounterSample:
+	def __init__(self, time, value):
+		self._time = time
+		self._value = value
+	
+	def get_time(self):
+		return self._time
+	
+	def get_value(self):
+		return self._value
+
+class CounterData:
+	def __init__(self, id, label):
+		self._id = id
+		self._label = label
+		self._samples = []
+	
+	def get_id(self):
+		return self._id
+	
+	def get_label(self):
+		return self._label
+	
+	def get_samples(self):
+		return self._samples
+	
+	def add_sample(self, sample):
+		self._samples.append(sample)
+
 class ProfileData:
 	def __init__(self):
 		self._threads = []
+		self._counters = []
 		self._start_time = None
 		self._finish_time = None
 
@@ -262,3 +292,18 @@ class ProfileData:
 		print "Finish Time:", self._finish_time
 		for thread in self._threads:
 			thread.debug_tty()
+	
+	def get_num_counters(self):
+		return len(self._counters)
+	
+	def get_counter(self, index):
+		return self._counters[index]
+
+	def on_counter(self, counter_id, counter_label):
+		counter = CounterData(counter_id, counter_label)
+		self._counters.append(counter)
+	
+	def on_counter_value(self, counter_id, time, counter_value):
+		counter = self._counters[counter_id]
+		sample = CounterSample(time, counter_value)
+		counter.add_sample(sample)

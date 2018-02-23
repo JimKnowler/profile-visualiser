@@ -130,3 +130,21 @@ class TestParser(PyMockTestCase):
 		self.replay()
 		parser.parse("Y 2 1 444")
 		self.verify()
+
+	def test_should_parse_counter_registration(self):
+		mock_consumer = self.mock()
+		parser = ProfileParser(mock_consumer)
+
+		self.expectAndReturn(mock_consumer.on_counter(132, "My counter"), None)
+		self.replay()
+		parser.parse("C 132 My counter")
+		self.verify()
+	
+	def test_should_parse_counter_value(self):
+		mock_consumer = self.mock()
+		parser = ProfileParser(mock_consumer)
+
+		self.expectAndReturn(mock_consumer.on_counter_value(132, 22, 44), None)
+		self.replay()
+		parser.parse("D 132 22 44")
+		self.verify()

@@ -70,3 +70,18 @@ class ProfileParser:
 			time = int(split_line[3])
 
 			self._consumer.on_event_emit(thread_id, event_id, time)
+		elif line_type == 'C':
+			split_line = line.split(' ',2)
+			
+			counter_id = int(split_line[1])
+			counter_label = split_line[2]
+
+			self._consumer.on_counter(counter_id, counter_label)
+		elif line_type == 'D':
+			split_line = line.split(' ',3)
+			
+			counter_id = int(split_line[1])
+			time = int(split_line[2])
+			counter_value = int(split_line[3])
+
+			self._consumer.on_counter_value(counter_id, time, counter_value)
