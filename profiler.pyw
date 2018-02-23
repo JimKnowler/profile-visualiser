@@ -139,7 +139,7 @@ class ProfilerWindow(gtk.DrawingArea):
 
         self._profile_render.render(cr)
 
-        if self._is_mouse_over:
+        if self._is_mouse_over and self._last_xy:
             self._profile_render.render_pointer(cr, self._last_xy)
 
     # Handle the configure-event by resizing
