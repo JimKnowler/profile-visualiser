@@ -140,3 +140,22 @@ Register an event for a thread, that can then be emitted multiple times.
 
 * 'Event ID' corresponds to the Event ID of a Event registered with ( **V** )
 
+### C = Register Counter
+
+``` C 3 My Counter Label ```
+
+``` C <Counter ID> <Counter Label> ```
+
+* 'Counter ID' should be unique for each counter
+
+* 'Counter Label' is parsed as all remaining characters until the newline, so it can include spaces
+
+### D = Emit Counter Value
+
+``` D 3 33443 99 ```
+
+``` D <Counter ID> <Clock Time in Microseconds> <Value> ```
+
+* 'Counter ID' corresponds to the Counter ID of a Counter registered with ( **C** ) 
+
+* 'Value' is a signed 32bit integer
