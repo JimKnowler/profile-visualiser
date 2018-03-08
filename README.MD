@@ -159,3 +159,24 @@ Register an event for a thread, that can then be emitted multiple times.
 * 'Counter ID' corresponds to the Counter ID of a Counter registered with ( **C** ) 
 
 * 'Value' is a signed 32bit integer
+
+## TODO
+
+- Collate intrusive / exclusive stats for each sample, for each Thread
+
+- Highlight sample that pointer hovers over
+  - Tooltip with summary data
+
+- Highlight counter sample that pointer hovers over
+  - Tooltip with counter value
+
+- Add scale for each counter (max / min values)
+
+- Add time scale at top of window
+
+- Multi-Threaded rendering
+  - decouple rendering from main thread to a separate render thread
+  - double-buffer rendering (i.e. render to background buffer while foreground buffer is used on screen)
+  - at startup, cache a low-rez render of all profile data
+
+
