@@ -23,12 +23,14 @@ EVENT_LABEL_OFFSET_Y = 1
 COUNTER_ROW_HEIGHT = 100
 
 class RenderContext:
-	def __init__(self, cr, width, height, start_time, finish_time):
+	def __init__(self, cr, width, height, start_time, finish_time, offset_x, offset_y):
 		self.cr = cr
 		self.width = float(width)
 		self.height = float(height)
 		self.start_time = start_time
 		self.finish_time = finish_time
+		self.offset_x = offset_x
+		self.offset_y = offset_y
 		self._duration = max(0.001, float(finish_time - start_time))
 
 	def get_x_for_time(self, time):
@@ -261,23 +263,17 @@ class ProfileRenderThread:
 		""" return the height of this thread on screen, in pixels """
 		return self._height
 
-class ProfileRender:
-	""" Render the data for a profiling session """
+class ProfileRenderObjects:
 
 	def __init__(self, profile_data):
-		self._width = 0.0
-		self._height = 0.0
-		self._profile_data = profile_data
-		self._render_counters = []
-		self._render_threads = []		
-		self._offset_y = 0
-		
+		self._counters = []
+		self._threads = []
+
 		num_counters = profile_data.get_num_counters()
 		num_threads = profile_data.get_num_threads()
 		num_rows = num_counters + num_threads
 
 		row_index_mutable = [0]
-		
 		def get_row_colours():
 			row_index = row_index_mutable[0]
 			background_colour =  (1.0,1.0,1.0) if (row_index % 2) else (243.0/255.0,245.0/255.0,220.0/255.0)
@@ -289,34 +285,37 @@ class ProfileRender:
 			counter_data = profile_data.get_counter(i)
 			(background_colour, colour) = get_row_colours()			
 			render_counter = ProfileRenderCounter(counter_data, colour, background_colour)
-			self._render_counters.append( render_counter )
+			self._counters.append( render_counter )
 		 				
 		for i in range(num_threads):
 			thread_data = profile_data.get_thread(i)
 			(background_colour, colour) = get_row_colours()			
 			render_thread = ProfileRenderThread(thread_data, colour, background_colour)
-			self._render_threads.append( render_thread )
+			self._threads.append( render_thread )
 
-		# time at left edge of the window
-		self._start_time = profile_data.get_start_time()
-
-		# time at right edge of the window
-		self._finish_time = profile_data.get_finish_time()
-
-	def render(self, cr):
-
+		self._render_height = self._calculate_render_height()
+		
+	def _render_background(self, render_context):
 		# Fill the background with white
+		cr = render_context.cr
+
 		cr.set_source_rgb(1.0, 1.0, 1.0)
-		cr.rectangle(0, 0, self._width, self._height)
+		cr.rectangle(0, 0, render_context.width, render_context.height)
 		cr.fill()
 
-		offset_y = self._offset_y
-		offset_x = 0
+	def render(self, render_context):		
+		cr = render_context.cr
+		self._render_background(render_context)
+		self._render_counters(render_context)
+		self._render_threads(render_context)
 
-		render_context = RenderContext( cr, self._width, self._height, self._start_time, self._finish_time)
+	def _render_counters(self, render_context):
+		cr = render_context.cr
+		offset_x = render_context.offset_x
+		offset_y = render_context.offset_y
 
-		for render_counter in self._render_counters:
-			if offset_y > self._height:
+		for render_counter in self._counters:
+			if offset_y > render_context.height:
 				break
 			
 			if (offset_y + render_counter.get_height()) > 0:
@@ -327,9 +326,16 @@ class ProfileRender:
 
 			offset_y += render_counter.get_height()
 
-		for render_thread in self._render_threads:
+		render_context.offset_x = offset_x
+		render_context.offset_y = offset_y
 
-			if offset_y > self._height:
+	def _render_threads(self, render_context):
+		cr = render_context.cr
+		offset_x = render_context.offset_x
+		offset_y = render_context.offset_y
+
+		for render_thread in self._threads:
+			if offset_y > render_context.height:
 				break
 
 			if (offset_y + render_thread.get_height()) > 0:
@@ -339,6 +345,48 @@ class ProfileRender:
 				cr.restore()
 
 			offset_y += render_thread.get_height()
+		
+		render_context.offset_x = offset_x
+		render_context.offset_y = offset_y
+	
+	def _calculate_render_height(self):
+		# get the combined height of all the render counters & threads
+		render_height = 0
+
+		for counter in self._counters:
+			render_height += counter.get_height()
+
+		for thread in self._threads:
+			render_height += thread.get_height()	
+		
+		return render_height
+	
+	def get_render_height(self):
+		return self._render_height
+
+class ProfileRender:
+	""" Render the data for a profiling session """
+
+	def __init__(self, profile_data):
+		self._width = 0.0
+		self._height = 0.0
+		self._profile_data = profile_data
+
+		self._profile_data_objects = ProfileRenderObjects(profile_data)
+		
+		self._offset_y = 0
+						
+		# initialise times at the left + right edges of the window
+		self._start_time = profile_data.get_start_time()
+		self._finish_time = profile_data.get_finish_time()
+
+	def render(self, cr):								
+		offset_y = self._offset_y
+		offset_x = 0
+
+		render_context = RenderContext( cr, self._width, self._height, self._start_time, self._finish_time, offset_x, offset_y)
+		
+		self._profile_data_objects.render(render_context )
 
 	def render_pointer(self, cr, pointer):
 		(x,y) = pointer
@@ -348,7 +396,6 @@ class ProfileRender:
 		cr.move_to(x,0)
 		cr.line_to(x, self._height)
 		cr.stroke()
-
 
 	def resize(self, width, height):
 		self._width = float(width)
@@ -407,7 +454,7 @@ class ProfileRender:
 			self._finish_time = profile_finish_time	
 		
 		# validate offset_y		
-		profile_render_height = self._get_render_height()
+		profile_render_height = self._profile_data_objects.get_render_height()
 		offset_y = self._offset_y
 		bottom = self._offset_y + profile_render_height
 		if bottom < self._height:
@@ -416,15 +463,3 @@ class ProfileRender:
 
 		offset_y = min(0, offset_y)
 		self._offset_y = offset_y
-
-	def _get_render_height(self):
-		# get the combined height of all the render counters & threads
-		render_height = 0
-
-		for render_counter in self._render_counters:
-			render_height += render_counter.get_height()
-
-		for render_thread in self._render_threads:
-			render_height += render_thread.get_height()	
-		
-		return render_height
